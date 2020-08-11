@@ -102,31 +102,26 @@ for idx,s in enumerate(seas): # the 4 seasons
         
         time = time - time[0]
 
-                        
-        """ To find the horiz. distance for a set number of trajectories over the full 90 days, finding also the first sinking depth """  
-        plot_idx = np.random.permutation(depths.shape[0])  
-        rand_samples = plot_idx[0:500]
-        
-        dist = np.zeros((rand_samples.shape[0],time.shape[0]-1)) #lons.shape[0]
-        zind = np.zeros((rand_samples.shape[0]))
-        for i in range(dist.shape[0]): #9582: number of particles 
-        
-            z2 = [0,] * dist.shape[1]
-            for ii in range(2,dist.shape[1]):
-                z2[ii-1] = depths[i,ii]-depths[i,ii-1] #np.where(depths[i,ii]<depths[i,ii-1])[0]
-            zf = np.where(np.array(z2) < 0.)[:]
-            #print(zf)
-            zind[i] = zf[0][0] if np.array(zf).any() else np.nan
+
+        """ To find the horiz. distance until the first depth it sinks to """
+        dist = np.zeros((depths.shape[0],time.shape[0]-1)) #lons.shape[0]
+        for i in range(depths.shape[0]): #9582: number of particles 
             
-            for t in range(time.shape[0]-1): 
-                if np.isnan(lats[i,t+1]): #and np.array(sinks).any():
-                    dist[i,t] = np.nan               
-                else:
-                    loc1 = (lats[i,t],lons[i,t])
-                    loc2 = (lats[i,t+1],lons[i,t+1])                        
-                    dist[i,t] = distance.geodesic(loc1,loc2).km 
-                        
-                        
+            z2 = [0,] * depths.shape[1]
+            for ii in range(2,depths.shape[1]):
+                z2[ii-1] = depths[i,ii]-depths[i,ii-1] #np.where(depths[i,ii]<depths[i,ii-1])[0]
+            zf = np.where(np.array(z2) < 0.)[:]           
+            zind = zf[0][0] if np.array(zf).any() else []
+
+            if np.array(zind).any():
+                for t in range(np.array(zind)): #time.shape[0]-1): 
+                    #sinks = np.where(depths[0,:]>1.0)
+                    if lats[i,t+1].any(): #and np.array(sinks).any():
+                        loc1 = (lats[i,t],lons[i,t])
+                        loc2 = (lats[i,t+1],lons[i,t+1])                        
+                        dist[i,t] = distance.geodesic(loc1,loc2).km 
+                    else:
+                        dist[i,t] = np.nan                   
                         
  #%%                   
     distnan = np.where(dist==0,np.nan,dist)    
@@ -135,7 +130,7 @@ for idx,s in enumerate(seas): # the 4 seasons
     n = np.array(([[np.nan, ]] * distcum.shape[0]))
     dist_p = np.append(distcum,n, axis= 1)
     
-    lats_p = np.tile(lats[rand_samples,0],(lats.shape[1],1)).T
+    lats_p = np.tile(lats[:,0],(lats.shape[1],1)).T
     
     ''' median depth and distance'''
     z_med = np.nanmedian(depths[depths>1].ravel().data)
@@ -144,7 +139,7 @@ for idx,s in enumerate(seas): # the 4 seasons
     ''' to get the cmap for line plot below, need to get it from scatterplot '''
     fig1 = plt.figure(figsize=(15,10))
     cmap = plt.cm.get_cmap('coolwarm',7)
-    scat = plt.scatter(dist_p,(depths[rand_samples,:]*-1), vmin = -70, vmax = 70, c = lats_p, cmap = cmap) #, alpha = 0.4) #, cbarlabel = 'initial latitude') # 
+    scat = plt.scatter(dist_p,(depths*-1), vmin = -70, vmax = 70, c = lats_p, cmap = cmap) #, alpha = 0.4) #, cbarlabel = 'initial latitude') # 
     
     #%% 20/07/20- Line plot with marker depth vs horizontal distance 
     
@@ -152,7 +147,10 @@ for idx,s in enumerate(seas): # the 4 seasons
     cbar = plt.colorbar(scat,label = 'initial latitude')
     
     ''' using colorbar above to separate colours by initial release latitudinal bins'''
-    for ii in range(distcum.shape[0]):
+    plot_idx = np.random.permutation(dist_p.shape[0])
+    
+    for i in range(distcum.shape[0]):
+        ii = plot_idx[i]
         
         if lats_p[ii,0]<-50.:
             rgb = cmap(0)[:3]
@@ -168,14 +166,14 @@ for idx,s in enumerate(seas): # the 4 seasons
             rgb = cmap(5)[:3]
         elif lats_p[ii,0]>=50.:
             rgb = cmap(6)[:3]
-        
-        """ Plot of depth vs. horiz distance for 500 trajectories with a scatter dot for the first max depth"""  
-        ind = int(zind[ii]) if zind[ii]>1. else []
-        if np.array(ind).any():
-            plt.plot(dist_p[ii,:],(depths[ii,:]*-1), c = rgb, linewidth=2, alpha = 0.7)# 0.6) #alpha = 0.6, 
-            plt.plot(dist_p[ii,ind],(depths[ii,ind]*-1), marker = 'o', c = rgb, markersize=10, markeredgecolor='black',alpha = 0.7) 
   
-    
+        """To plot a scatter dot for the first max depth"""
+        plt.plot(dist_p[ii,:],(depths[ii,:]*-1), c = rgb, linewidth=2, alpha = 0.7)# 0.6) #alpha = 0.6, 
+        ind_nonan = np.where(dist_p[ii,:]>0.)
+        if np.array(ind_nonan).any():
+            last_ind = ind_nonan[0][-1]
+            plt.plot(dist_p[ii,last_ind],(depths[ii,last_ind]*-1), marker = 'o', c = rgb, markersize=10, markeredgecolor='black',alpha = 0.7) 
+            
     plt.axvline(x=dist_med, color = 'k', linewidth = 4)
     plt.axhline(y=z_med*-1, color = 'k', linewidth = 4)
     plt.ylim(top=0, bottom =-250) 
