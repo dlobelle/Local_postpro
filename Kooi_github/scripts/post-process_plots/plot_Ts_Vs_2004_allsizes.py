@@ -24,7 +24,7 @@ import warnings
 warnings.filterwarnings("ignore", "Mean of empty slice")
 
 rho =  '920' #np.array([920])  # [kgm-3]: density of the plastic 
-size = 'r1e-06' #np.array([1e-7]) # [m]: size of plastic
+size = 'r1e-07' #np.array([1e-7]) # [m]: size of plastic
 res = '2x2' # [deg]: resolution of the global release of particles
 loc = 'global'
 
@@ -47,8 +47,13 @@ yr = 2004
 numyrs = 1
 seas = ['DJF', 'MAM', 'JJA', 'SON']
 
-t_set_all = np.zeros((9620,len(seas))) # just keeping it to have the same num of variables in the pickle. 
-vs_max_all = np.zeros((9620,len(seas)))
+if size == 'r1e-05' or size == 'r1e-07':
+    num_part = 9582
+else:
+    num_part = 9620
+    
+t_set_all = np.zeros((num_part,len(seas))) # just keeping it to have the same num of variables in the pickle. 
+vs_max_all = np.zeros((num_part,len(seas)))
 
 for idy,s in enumerate(seas):
 
@@ -72,9 +77,9 @@ for idy,s in enumerate(seas):
                     lons = np.vstack((lons,data.variables['lon'][:])) 
                     lats= np.vstack((lats,data.variables['lat'][:]))
                     depths =np.vstack((depths,data.variables['z'][:]))
-                    vs = np.vstack((depths,data.variables['vs'][:]))
+                    vs = np.vstack((vs,data.variables['vs'][:]))
     elif size == 'r1e-03' or size == 'r1e-06':
-        fname = 'noadv_global_%s_%s_3D_grid2x2_allrho_allr_90days_60dtsecs_12hrsoutdt.nc' % (s, yr)
+        fname = 'global_%s_%s_3D_grid2x2_allrho_allr_90days_60dtsecs_12hrsoutdt.nc' % (s, yr)
         dirread = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/data_output/allrho/res_'+res+'/allr/'
         if not os.path.isfile(dirread+fname):
             print('%s not found' %fname)
@@ -94,7 +99,7 @@ for idy,s in enumerate(seas):
             vs = data.variables['vs'][inds]
             
     else:     
-        fname = 'noadv_global_%s_%s_3D_grid2x2_rho%s_%s_90days_60dtsecs_12hrsoutdt.nc' % (s, yr, rho, size_fn)
+        fname = 'global_%s_%s_3D_grid2x2_rho%s_%s_90days_60dtsecs_12hrsoutdt.nc' % (s, yr, rho, size_fn)
         if not os.path.isfile(dirread+fname):
             print('%s not found' %fname)
         else:          
@@ -107,21 +112,36 @@ for idy,s in enumerate(seas):
     
         ''' find the first time and max depth where particles sink (below 1 m, since that's the initial release depth) '''      
     time = time - time[0]
-    z_set = [0, ] * depths.shape[0]
-    vs_max = [0, ] * depths.shape[0]
+    #z_set = [0, ] * depths.shape[0]
+    t_set = [0, ] * depths.shape[0]
+    vs_max = [np.nan, ] * depths.shape[0]
+    #vs_max[:] = np.nan
+    z = []    
     for i in range(depths.shape[0]): #9620: number of particles 
-        z = np.where(depths[i,:] > 1.)[0]
-        z_set[i] = z[0] if z.any() else 0
-              
+        depths2 = depths[i,:] 
+        z = np.where(depths2 > 1.)
+        
         z2 = [0,] * depths.shape[1]
-        for ii in range(2,depths.shape[1]):
-            z2[ii-1] = depths[i,ii]-depths[i,ii-1] #np.where(depths[i,ii]<depths[i,ii-1])[0]
-        zf = np.where(np.array(z2) < 0.)[:]
-        zind = zf[0][0] if np.array(zf).any() else []     
-        vs_max[i] = np.max(vs[i,0:zind]) if np.array(zind).any() else np.nan
-            
-    t_set = time[z_set]
-    t_set[t_set == 0] = np.nan 
+        zind = []
+        z_set = []
+        if z[0].any():
+            z_set = z[0][0]-1
+
+            for ii in range(z_set,depths.shape[1]): #(2,depths.shape[1]):
+                #if depths2[ii]>0.: #1.
+                z2[ii-1] = depths[i,ii]-depths[i,ii-1] #np.where(depths[i,ii]<depths[i,ii-1])[0]
+            zf = np.where(np.array(z2) < 0.)[:]           
+            zind = zf[0][0] if np.array(zf).any() else [] #np.nan
+        
+            ''' finding the largest (positive) vs to plot max sinking velocity''' 
+            if np.array(zind).any():
+                v0 = vs[i,z_set:zind]
+                v_f = np.where(v0>0.)
+                vs_max[i] = np.max(v0[v_f[0]]) if np.array(v_f).any() else np.nan #vs[i,z_set-1]
+            else: 
+                vs_max[i] = np.nan 
+            # vs_max[i] = np.max(vs[i,:]) #[i,0:zind]) if np.array(zind).any() else np.nan
+            t_set[i] = time[z_set]
     
     
     if size == 0.01:
@@ -148,10 +168,8 @@ for idy,s in enumerate(seas):
     t_set_all[:,idy] = t_set   
     vs_max_all[:,idy] = vs_max
     
-    # t_set_all = np.hstack(t_set)     #t_set_all[:,idy] = t_set #
-    # vs_max_all = np.hstack(np.array([vs_max]).T) #.append(np.array(vs_max).T)[:] #vs_max_all[:,idy] = vs_max
-    # vs_max_all = np.concatenate((vs_max_all,np.array([vs_max]).T)) #,axis=1)
-        
+
+t_set_all[t_set_all==0] = np.nan        
 Ts = np.nanmean(t_set_all,axis=1) #[:,idx]
 Vs = np.nanmean(vs_max_all,axis=1)
     
@@ -174,7 +192,7 @@ scat = m.scatter(xs, ys, marker='.', c=Ts,cmap = cmap, vmin = 0, vmax = 90, s = 
 cbar = m.colorbar(label = 'days') #,ax=axs[idx])  
 cbar.set_label(label='days', size='20')   
 cbar.ax.tick_params(labelsize=20) 
-plt.title(str(yr)+' no advection all seas average settling onset time [days], rho ='+str(rho)+', size ='+str(size) ,size = 20)
+plt.title(str(yr)+' all seas average settling onset time [days], rho ='+str(rho)+', size ='+str(size) ,size = 20)
     
 
 fig2 = plt.figure(figsize=(20,10))
@@ -192,3 +210,25 @@ cbar = m.colorbar(label = 'm/s') #,ax=axs[idx])
 cbar.set_label(label='[m/s]', size='20')   
 cbar.ax.tick_params(labelsize=20) 
 plt.title(str(yr)+' all seas average maximum settling velocity [m/s], rho ='+str(rho)+', size ='+str(size) ,size = 20)
+
+
+''' plotting Ts against Vs which could be linear relationship''' 
+fig3 = plt.figure(figsize =(20,10))
+plt.scatter(Ts,Vs) 
+plt.xlabel('Ts')
+plt.ylabel('Vs')
+#plt.ylim(bottom=0, top =0.05) 
+
+#%%
+# v900 = vs[1000,:]
+# d900 = depths[1000,:]
+
+# fig4 = plt.figure(figsize =(20,10))
+# plt.plot(time[0:6],v900[0:6])
+# plt.ylim(bottom=-0.1, top =0) 
+# plt.title('settling velocity for 1 trajectory rho ='+str(rho)+', size ='+str(size))
+
+# fig5 = plt.figure(figsize =(20,10))
+
+# plt.plot(time[0:6],d900[0:6]*-1)
+# plt.title('depth for 1 trajectory rho ='+str(rho)+', size ='+str(size))
