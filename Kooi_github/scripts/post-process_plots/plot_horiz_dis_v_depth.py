@@ -21,7 +21,7 @@ import numpy.matlib
 #import cmocean
 import os #, fnmatch 
 #import cartopy
-#import pickle 
+import pickle 
 np.seterr(divide='ignore', invalid='ignore')
 import warnings
 warnings.filterwarnings("ignore", "Mean of empty slice")
@@ -47,7 +47,7 @@ plt.close("all")
 yr_st = 2004
 numyrs = 1
 yrs = np.arange(yr_st,yr_st+numyrs)
-seas = ['DJF', 'MAM', 'JJA', 'SON']
+seas = ['MAM'] #'DJF', 'MAM', 'JJA', 'SON']
 
 
 for idx,s in enumerate(seas): # the 4 seasons 
@@ -104,34 +104,41 @@ for idx,s in enumerate(seas): # the 4 seasons
 
 
         """ To find the horiz. distance until the first depth it sinks to """
-        dist_p = np.empty(depths.shape[0]) #,time.shape[0]-1)) #lons.shape[0]
-        dist_p[:] = np.nan  
+        # time_p = np.zeros((depths.shape[0],depths.shape[1])) #,time.shape[0]-1)) #lons.shape[0]
+        # time_p[:] = np.nan  
         
-        depth_p = np.empty(depths.shape[0]) #,time.shape[0]-1)) #lons.shape[0]
-        depth_p[:] = np.nan 
+        # depth_p = np.zeros((depths.shape[0],depths.shape[1])) #,time.shape[0]-1)) #lons.shape[0]
+        # depth_p[:] = np.nan  
+        #zind = np.zeros((depths.shape[0]))
+
+        boo = np.zeros((depths.shape[0],depths.shape[1]))
+        depths2 = []
+        zind = []
         for i in range(depths.shape[0]): #9582: number of particles 
             
             z2 = [0,] * depths.shape[1]
-            for ii in range(2,depths.shape[1]):
-                if depths[i,ii]>1.:
-                    z2[ii-1] = depths[i,ii]-depths[i,ii-1] #np.where(depths[i,ii]<depths[i,ii-1])[0]
-            zf = np.where(np.array(z2) < 0.)[:]           
-            zind = zf[0][0] if np.array(zf).any() else []
-            
-            if np.array(zind).any():
-                depth_p[i] = depths[i,zind]
-                loc1 = (lats[i,0],lons[i,0])
-                loc2 = (lats[i,np.array(zind)],lons[i,np.array(zind)])                        
-                dist_p[i] = distance.geodesic(loc1,loc2).km
-                
-                # for t in range(np.array(zind)): #time.shape[0]-1): 
-                #     #sinks = np.where(depths[0,:]>1.0)
-                #     if lats[i,t+1].any(): #and np.array(sinks).any():
-                #         loc1 = (lats[i,t],lons[i,t])
-                #         loc2 = (lats[i,t+1],lons[i,t+1])                        
-                #         dist[i,t] = distance.geodesic(loc1,loc2).km 
-                #     else:
-                #         dist[i,t] = np.nan                   
+            depths2 = depths[i,:]
+            if any(depths2>1.):
+                f = np.where(depths2>1.)
+                for ii in range(f[0][0],depths.shape[1]): #(2,depths.shape[1]):
+                    if depths2[ii]>0.: #1.
+                        z2[ii-1] = depths[i,ii]-depths[i,ii-1] #np.where(depths[i,ii]<depths[i,ii-1])[0]
+                zf = np.where(np.array(z2) < 0.)[:]           
+                zind = zf[0][0] if np.array(zf).any() else [] #np.nan
+                if np.array(zind).any():
+                    j = np.array(zind)
+                    boo[i,:j+1] = 1.
+            # if np.array(zind).any(): 
+            #     time_p[i,:] = time[0:np.array(zind)]
+            #     depth_p[i,:] = depths[i,0:np.array(zind)]
+            #     for t in range(np.array(zind)): #time.shape[0]-1): 
+            #         #sinks = np.where(depths[0,:]>1.0)
+            #         if lats[i,t+1].any(): #and np.array(sinks).any():
+            #             loc1 = (lats[i,t],lons[i,t])
+            #             loc2 = (lats[i,t+1],lons[i,t+1])                        
+            #             dist[i,t] = distance.geodesic(loc1,loc2).km 
+            #         else:
+            #             dist[i,t] = np.nan                   
                         
  #%%                   
                
@@ -142,73 +149,110 @@ for idx,s in enumerate(seas): # the 4 seasons
     #lats_p = np.tile(lats[:,0],(2,1)).T
     
     ''' median depth and distance'''
-    # z_med = np.nanmedian(depths[depths>1].ravel().data)
+    #z_med = np.nanmedian(depths[depths>1].ravel().data)
     # dist_med = np.nanmedian(dist_p.ravel().data)
     
     ''' to get the cmap for line plot below, need to get it from scatterplot '''
+    plot_idx = np.random.permutation(depths.shape[0])
+    
+    time_p = np.tile(time,(depths.shape[0],1))#.T
+    lats_p = np.tile(lats[plot_idx,0],(lats.shape[1],1)).T
+    depths_p = depths[plot_idx,:]
+    boo2 = np.array(boo[plot_idx,:],dtype='bool')
+
+    
     fig1 = plt.figure(figsize=(15,10))
     cmap = plt.cm.get_cmap('coolwarm',7)
-    scat = plt.scatter(dist_p,(depth_p*-1), vmin = -70, vmax = 70, c = lats[:,0], cmap = cmap) #, alpha = 0.4) #, cbarlabel = 'initial latitude') # 
+    scat = plt.scatter(time_p[boo2],(depths_p[boo2]*-1), vmin = -70, vmax = 70, c = lats_p[boo2], cmap = cmap, alpha = 0.6) #, cbarlabel = 'initial latitude') # 
     ax = plt.gca()
     ax.set_facecolor('darkgrey') 
     plt.colorbar()
-    plt.ylim(top=0, bottom =-160) 
-    plt.xlim(left=0, right = 2500)
+    plt.ylim(top=0, bottom =-240) 
+    plt.xlim(left=0, right = 90)
     ax = plt.gca()
     #ax.set_facecolor('lightgrey')   
     plt.ylabel('Depth [m]', size = 20)
-    plt.xlabel('Horizontal distance [km]', size = 20)
+    plt.xlabel('Time [days]', size = 20)
     font = {'size'   : 20} ##'family' : 'normal',
             #'weight' : 'bold',
-    plt.title(str(s)+' Horizontal distance travelled by rho ='+str(rho)+', size ='+str(size) ,size = 20)
+    plt.title(str(s)+' First sinking depth reached within 90 days by rho rho ='+str(rho)+', size ='+str(size) ,size = 20)
     
     matplotlib.rc('font', **font)
     #%% 20/07/20- Line plot with marker depth vs horizontal distance 
+
+    fig2 = plt.figure(figsize=(15,10))
+    cbar = plt.colorbar(scat,label = 'initial latitude')
     
-    # fig2 = plt.figure(figsize=(15,10))
-    # cbar = plt.colorbar(scat,label = 'initial latitude')
+    ''' using colorbar above to separate colours by initial release latitudinal bins'''
+    #plot_idx = np.random.permutation(dist_p.shape[0])
+    #lats_p = lats
     
-    # ''' using colorbar above to separate colours by initial release latitudinal bins'''
-    # plot_idx = np.random.permutation(dist_p.shape[0])
-    # lats_p = lats
-    # for i in range(plot_idx.shape[0]):
-    #     ii = plot_idx[i]
+    time_save = np.zeros(plot_idx.shape[0])
+    time_save[:] = np.nan
+    depths_save = np.zeros(plot_idx.shape[0])
+    depths_save[:] = np.nan  
+    lats_save = np.zeros(plot_idx.shape[0])
+    d = np.zeros((depths.shape[0],depths.shape[1]))
+    d[:] = np.nan 
+    for ii in range(plot_idx.shape[0]):
+        # ii = plot_idx[i]
+        boo_p = boo2[ii,:]
         
-    #     if lats_p[ii,0]<-50.:
-    #         rgb = cmap(0)[:3]
-    #     elif lats_p[ii,0]<-30. and lats_p[ii,0]>=-50.:
-    #         rgb = cmap(1)[:3]
-    #     elif lats_p[ii,0]<-10. and lats_p[ii,0]>=-30.:
-    #         rgb = cmap(2)[:3]
-    #     elif lats_p[ii,0]<10. and lats_p[ii,0]>=-10.:
-    #         rgb = cmap(3)[:3]            
-    #     elif lats_p[ii,0]<30. and lats_p[ii,0]>=10.:
-    #         rgb = cmap(4)[:3]
-    #     elif lats_p[ii,0]<50. and lats_p[ii,0]>=30.:
-    #         rgb = cmap(5)[:3]
-    #     elif lats_p[ii,0]>=50.:
-    #         rgb = cmap(6)[:3]
+        if lats_p[ii,0]<-50.:
+            rgb = cmap(0)[:3]
+        elif lats_p[ii,0]<-30. and lats_p[ii,0]>=-50.:
+            rgb = cmap(1)[:3]
+        elif lats_p[ii,0]<-10. and lats_p[ii,0]>=-30.:
+            rgb = cmap(2)[:3]
+        elif lats_p[ii,0]<10. and lats_p[ii,0]>=-10.:
+            rgb = cmap(3)[:3]            
+        elif lats_p[ii,0]<30. and lats_p[ii,0]>=10.:
+            rgb = cmap(4)[:3]
+        elif lats_p[ii,0]<50. and lats_p[ii,0]>=30.:
+            rgb = cmap(5)[:3]
+        elif lats_p[ii,0]>=50.:
+            rgb = cmap(6)[:3]
   
-    #     """To plot a scatter dot for the first max depth"""
-    #     plt.plot(dist_p[ii],(depth_p[ii]*-1), c = rgb, linewidth=2, alpha = 0.7)# 0.6) #alpha = 0.6, 
-    #     ind_nonan = np.where(dist_p[ii]>0.)
-    #     if np.array(ind_nonan).any():
-    #         last_ind = ind_nonan[0][-1]
-    #         plt.plot(dist_p[ii,last_ind],(depths[ii,last_ind]*-1), marker = 'o', c = rgb, markersize=10, markeredgecolor='black',alpha = 0.7) 
+        """To plot a scatter dot for the first max depth"""
+        # d0 = depths_p[ii,boo_p]*-1 
+        # d[ii,0:d0.shape[0]] = d0 if d0.shape[0]>0. else 0.
+        
+        # d2 = np.zeros((depths.shape[0],depths.shape[1]))
+        # for zz in range(1,depths.shape[1]):
+        #     d2[ii,zz] = d[ii,zz]-d[ii,zz-1] #np.where(depths[i,ii]<depths[i,ii-1])[0]
+        #     zf2 = np.where(np.array(d2) > 0.)[:] 
             
-    #plt.axvline(x=dist_med, color = 'k', linewidth = 4)
-    #plt.axhline(y=z_med*-1, color = 'k', linewidth = 4)
-    # plt.ylim(top=0, bottom =-250) 
-    # plt.xlim(left=0, right = 2500)
-    # ax = plt.gca()
-    # #ax.set_facecolor('lightgrey')   
-    # plt.ylabel('Depth [m]', size = 20)
-    # plt.xlabel('Horizontal distance [km]', size = 20)
-    # font = {'size'   : 20} ##'family' : 'normal',
-    #         #'weight' : 'bold',
-    # plt.title(str(s)+' Horizontal distance travelled by rho ='+str(rho)+', size ='+str(size) ,size = 20)
+            
+        plt.plot(time_p[ii,boo_p],(depths_p[ii,boo_p]*-1), c = rgb, linewidth=2, alpha = 0.6)# 0.6) #alpha = 0.6, 
+        ind_nonan = np.where(depths_p[ii,boo_p]>1.)
+        if np.array(ind_nonan).any():
+            last_ind = ind_nonan[0][-1]
+            plt.plot(time_p[ii,last_ind],(depths_p[ii,last_ind]*-1), marker = 'o', c = rgb, markersize=10, markeredgecolor='black',alpha = 0.7) 
+        
+            time_save[ii] = time_p[ii,last_ind]
+            depths_save[ii] = depths_p[ii,last_ind]
+            lats_save[ii] = lats_p[ii,0]
     
-    # matplotlib.rc('font', **font)
+    ''' median depth and distance'''
+    z_med = np.nanmedian(depths_save.ravel().data)
+    time_med = np.nanmedian(time_save.ravel().data)
+        
+    plt.axvline(x=time_med, color = 'k', linewidth = 4)
+    plt.axhline(y=z_med*-1, color = 'k', linewidth = 4)
+    plt.ylim(top=0, bottom =-240) 
+    plt.xlim(left=0, right = 90) #2500)
+    ax = plt.gca()
+    #ax.set_facecolor('lightgrey')   
+    plt.ylabel('Depth [m]', size = 20)
+    plt.xlabel('Time [days]', size = 20)
+    font = {'size'   : 20} ##'family' : 'normal',
+            #'weight' : 'bold',
+    plt.title(str(s)+' First sinking depth reached within 90 days by rho ='+str(rho)+', size ='+str(size) ,size = 20)
+    
+    matplotlib.rc('font', **font)
+
+# with open('/Users/Lobel001/Desktop/Local_postpro/Kooi_data/post_pro_data/Matias_test.pickle', 'wb') as f:
+#     pickle.dump([time_save,depths_save,lats_save], f)
 
 
 #%% 30/07/20- No longer want scatterplot
