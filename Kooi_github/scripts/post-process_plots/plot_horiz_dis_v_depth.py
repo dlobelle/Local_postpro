@@ -8,7 +8,7 @@ Created on Wed Jul  1 18:15:42 2020
 # 30/07/20- This has been written for 920 kg m-3 only. 
 
 #from math import sin, cos, sqrt, atan2, radians
-from geopy import distance
+#from geopy import distance
 
 import matplotlib 
 import matplotlib.pyplot as plt
@@ -21,113 +21,132 @@ import numpy.matlib
 #import cmocean
 import os #, fnmatch 
 #import cartopy
-import pickle 
+#import pickle 
 np.seterr(divide='ignore', invalid='ignore')
 import warnings
 warnings.filterwarnings("ignore", "Mean of empty slice")
 
 rho = '920' # [kgm-3]: density of the plastic 
 res = '2x2' # [deg]: resolution of the global release of particles
-size = 'r1e-07' # [m]: size of plastic
+# size = 'r1e-07' # [m]: size of plastic
 loc = 'global'
 
-if size == 'r1e-02':
-    size_fn = 'r0.01'
-else:
-    size_fn = size 
+# if size == 'r1e-02':
+#     size_fn = 'r0.01'
+# else:
+#     size_fn = size 
 
-dirread = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/data_output/rho_'+rho+'kgm-3/res_'+res+'/'+size+'/'
-dirwrite = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/post_pro_data/'
-dirwritefigs = '/Users/Lobel001/Desktop/Local_postpro/Kooi_figures/rho_'+rho+'kgm-3/res_'+res+'/'+size+'/'
+# dirread = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/data_output/rho_'+rho+'kgm-3/res_'+res+'/'+size+'/'
+# dirwrite = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/post_pro_data/'
+# dirwritefigs = '/Users/Lobel001/Desktop/Local_postpro/Kooi_figures/rho_'+rho+'kgm-3/res_'+res+'/'+size+'/'
 
 plt.close("all")
 
 #%%
 
-yr_st = 2004
-numyrs = 1
-yrs = np.arange(yr_st,yr_st+numyrs)
-seas = ['MAM'] #'DJF', 'MAM', 'JJA', 'SON']
+# yr_st = 2004
+# numyrs = 1
+# yrs = np.arange(yr_st,yr_st+numyrs)
+seas = 'MAM' #'DJF', 'MAM', 'JJA', 'SON']
+s = seas
+yr = 2004
 
+fig = plt.figure(figsize=(20,20), constrained_layout=True)
+gs = fig.add_gridspec(figure = fig, nrows = 4, ncols = 2, height_ratios = [6,6,6,1])
+plt.rc('font', size = 24)
 
-for idx,s in enumerate(seas): # the 4 seasons 
-    for idy,yr in enumerate(yrs): 
-        print(s, yr)
+for ids in range(2,8): #sizes
+    size = 'r1e-0'+str(ids) #'r1e-02'
+    if size == 'r1e-02':
+        size_fn = 'r0.01'
+    else:
+        size_fn = size #'r1e-02'
+    
+    print(size)
+    dirread = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/data_output/rho_'+rho+'kgm-3/res_'+res+'/'+size+'/'
+    dirwrite = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/post_pro_data/'
+    dirwritefigs = '/Users/Lobel001/Desktop/Local_postpro/Kooi_figures/rho_'+rho+'kgm-3/res_'+res+'/'+size+'/'
+    
+    if size == 'r1e-05' or size == 'r1e-07':
+        num_part = 9582
+    else:
+        num_part = 9620
+
         
-        if size == 'r1e-05' or size == 'r1e-07': # for those sizes that have 3 latitudinal bands 
-            loc = ['south_global','eq_global','north_global']
-            for idz, lo in enumerate(loc):
-                fname = '%s_%s_%s_3D_grid2x2_rho%s_%s_90days_60dtsecs_12hrsoutdt.nc' % (lo, s, yr, rho, size)
-                if not os.path.isfile(dirread+fname):
-                    print('%s not found' %fname)
-                else:          
-                    data = Dataset(dirread+fname,'r') 
-                    time = data.variables['time'][0,:]/86400
-                    if idz == 0:
-                        lons = data.variables['lon'][:]
-                        lats = data.variables['lat'][:]
-                        depths =data.variables['z'][:]
-                    else:
-                        lons = np.vstack((lons,data.variables['lon'][:])) 
-                        lats= np.vstack((lats,data.variables['lat'][:]))
-                        depths =np.vstack((depths,data.variables['z'][:]))
-        elif size == 'r1e-03' or size == 'r1e-06':
-            fname = 'global_%s_%s_3D_grid2x2_allrho_allr_90days_60dtsecs_12hrsoutdt.nc' % (s, yr)
-            dirread = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/data_output/allrho/res_'+res+'/allr/'
-            if not os.path.isfile(dirread+fname):
-                print('%s not found' %fname)
-            else:          
-                data = Dataset(dirread+fname,'r')  
-                time = data.variables['time'][0,:]/86400
-                rho2 = float(rho) #rho_all[ii]
-                size2 = float(size[1:len(size)]) #size_all[ii]
-                rho_output=data.variables['rho_pl'][:]
-                r_output=data.variables['r_pl'][:]
-               
-                inds = np.where((rho_output==rho2) & (r_output.data==size2))[0]
-               
-                lons=data.variables['lon'][inds] #[:]
-                lats=data.variables['lat'][inds] 
-                depths =data.variables['z'][inds]
-        else:        
-            fname = 'global_%s_%s_3D_grid2x2_rho%s_%s_90days_60dtsecs_12hrsoutdt.nc' % (s, yr, rho, size_fn)
+    if size == 'r1e-05' or size == 'r1e-07': # for those sizes that have 3 latitudinal bands 
+        loc = ['south_global','eq_global','north_global']
+        for idz, lo in enumerate(loc):
+            fname = '%s_%s_%s_3D_grid2x2_rho%s_%s_90days_60dtsecs_12hrsoutdt.nc' % (lo, s, yr, rho, size)
             if not os.path.isfile(dirread+fname):
                 print('%s not found' %fname)
             else:          
                 data = Dataset(dirread+fname,'r') 
                 time = data.variables['time'][0,:]/86400
-                lons=data.variables['lon'][:] 
-                lats=data.variables['lat'][:] 
-                depths =data.variables['z'][:]
+                if idz == 0:
+                    lons = data.variables['lon'][:]
+                    lats = data.variables['lat'][:]
+                    depths =data.variables['z'][:]
+                else:
+                    lons = np.vstack((lons,data.variables['lon'][:])) 
+                    lats= np.vstack((lats,data.variables['lat'][:]))
+                    depths =np.vstack((depths,data.variables['z'][:]))
+    elif size == 'r1e-03' or size == 'r1e-06':
+        fname = 'global_%s_%s_3D_grid2x2_allrho_allr_90days_60dtsecs_12hrsoutdt.nc' % (s, yr)
+        dirread = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/data_output/allrho/res_'+res+'/allr/'
+        if not os.path.isfile(dirread+fname):
+            print('%s not found' %fname)
+        else:          
+            data = Dataset(dirread+fname,'r')  
+            time = data.variables['time'][0,:]/86400
+            rho2 = float(rho) #rho_all[ii]
+            size2 = float(size[1:len(size)]) #size_all[ii]
+            rho_output=data.variables['rho_pl'][:]
+            r_output=data.variables['r_pl'][:]
+           
+            inds = np.where((rho_output==rho2) & (r_output.data==size2))[0]
+           
+            lons=data.variables['lon'][inds] #[:]
+            lats=data.variables['lat'][inds] 
+            depths =data.variables['z'][inds]
+    else:        
+        fname = 'global_%s_%s_3D_grid2x2_rho%s_%s_90days_60dtsecs_12hrsoutdt.nc' % (s, yr, rho, size_fn)
+        if not os.path.isfile(dirread+fname):
+            print('%s not found' %fname)
+        else:          
+            data = Dataset(dirread+fname,'r') 
+            time = data.variables['time'][0,:]/86400
+            lons=data.variables['lon'][:] 
+            lats=data.variables['lat'][:] 
+            depths =data.variables['z'][:]
+    
+    time = time - time[0]
+
+
+    """ To find the horiz. distance until the first depth it sinks to """
+    # time_p = np.zeros((depths.shape[0],depths.shape[1])) #,time.shape[0]-1)) #lons.shape[0]
+    # time_p[:] = np.nan  
+    
+    # depth_p = np.zeros((depths.shape[0],depths.shape[1])) #,time.shape[0]-1)) #lons.shape[0]
+    # depth_p[:] = np.nan  
+    #zind = np.zeros((depths.shape[0]))
+
+    boo = np.zeros((depths.shape[0],depths.shape[1]))
+    depths2 = []
+    zind = []
+    for i in range(depths.shape[0]): #9582: number of particles 
         
-        time = time - time[0]
-
-
-        """ To find the horiz. distance until the first depth it sinks to """
-        # time_p = np.zeros((depths.shape[0],depths.shape[1])) #,time.shape[0]-1)) #lons.shape[0]
-        # time_p[:] = np.nan  
-        
-        # depth_p = np.zeros((depths.shape[0],depths.shape[1])) #,time.shape[0]-1)) #lons.shape[0]
-        # depth_p[:] = np.nan  
-        #zind = np.zeros((depths.shape[0]))
-
-        boo = np.zeros((depths.shape[0],depths.shape[1]))
-        depths2 = []
-        zind = []
-        for i in range(depths.shape[0]): #9582: number of particles 
-            
-            z2 = [0,] * depths.shape[1]
-            depths2 = depths[i,:]
-            if any(depths2>1.):
-                f = np.where(depths2>1.)
-                for ii in range(f[0][0],depths.shape[1]): #(2,depths.shape[1]):
-                    if depths2[ii]>0.: #1.
-                        z2[ii-1] = depths[i,ii]-depths[i,ii-1] #np.where(depths[i,ii]<depths[i,ii-1])[0]
-                zf = np.where(np.array(z2) < 0.)[:]           
-                zind = zf[0][0] if np.array(zf).any() else [] #np.nan
-                if np.array(zind).any():
-                    j = np.array(zind)
-                    boo[i,:j+1] = 1.
+        z2 = [0,] * depths.shape[1]
+        depths2 = depths[i,:]
+        if any(depths2>1.):
+            f = np.where(depths2>1.)
+            for ii in range(f[0][0],depths.shape[1]): #(2,depths.shape[1]):
+                if depths2[ii]>0.: #1.
+                    z2[ii-1] = depths[i,ii]-depths[i,ii-1] #np.where(depths[i,ii]<depths[i,ii-1])[0]
+            zf = np.where(np.array(z2) < 0.)[:]           
+            zind = zf[0][0] if np.array(zf).any() else [] #np.nan
+            if np.array(zind).any():
+                j = np.array(zind)
+                boo[i,:j+1] = 1.
             # if np.array(zind).any(): 
             #     time_p[i,:] = time[0:np.array(zind)]
             #     depth_p[i,:] = depths[i,0:np.array(zind)]
@@ -164,8 +183,8 @@ for idx,s in enumerate(seas): # the 4 seasons
     fig1 = plt.figure(figsize=(15,10))
     cmap = plt.cm.get_cmap('coolwarm',7)
     scat = plt.scatter(time_p[boo2],(depths_p[boo2]*-1), vmin = -70, vmax = 70, c = lats_p[boo2], cmap = cmap, alpha = 0.6) #, cbarlabel = 'initial latitude') # 
-    ax = plt.gca()
-    ax.set_facecolor('darkgrey') 
+    #ax = plt.gca()
+    #ax.set_facecolor('darkgrey') 
     plt.colorbar()
     plt.ylim(top=0, bottom =-240) 
     plt.xlim(left=0, right = 90)
@@ -180,8 +199,36 @@ for idx,s in enumerate(seas): # the 4 seasons
     matplotlib.rc('font', **font)
     #%% 20/07/20- Line plot with marker depth vs horizontal distance 
 
-    fig2 = plt.figure(figsize=(15,10))
-    cbar = plt.colorbar(scat,label = 'initial latitude')
+    #fig2 = plt.figure(figsize=(15,10))
+    
+    
+    if ids == 2:
+        letter = '(a)'
+        r = 0
+        c = 0
+    if ids == 3:
+        letter = '(b)'
+        r = 0
+        c = 1
+    if ids == 4:
+        letter = '(c)'
+        r = 1
+        c = 0
+    if ids == 5:
+        letter = '(d)'
+        r = 1
+        c = 1
+    if ids == 6:
+        letter = '(e)'
+        r = 2
+        c = 0
+    if ids == 7:
+        letter = '(f)'
+        r = 2
+        c = 1
+
+    ax = fig.add_subplot(gs[r,c])
+    
     
     ''' using colorbar above to separate colours by initial release latitudinal bins'''
     #plot_idx = np.random.permutation(dist_p.shape[0])
@@ -223,11 +270,11 @@ for idx,s in enumerate(seas): # the 4 seasons
         #     zf2 = np.where(np.array(d2) > 0.)[:] 
             
             
-        plt.plot(time_p[ii,boo_p],(depths_p[ii,boo_p]*-1), c = rgb, linewidth=2, alpha = 0.6)# 0.6) #alpha = 0.6, 
+        ax.plot(time_p[ii,boo_p],(depths_p[ii,boo_p]*-1), c = rgb, linewidth=2, alpha = 0.6)# 0.6) #alpha = 0.6, 
         ind_nonan = np.where(depths_p[ii,boo_p]>1.)
         if np.array(ind_nonan).any():
             last_ind = ind_nonan[0][-1]
-            plt.plot(time_p[ii,last_ind],(depths_p[ii,last_ind]*-1), marker = 'o', c = rgb, markersize=10, markeredgecolor='black',alpha = 0.7) 
+            ax.plot(time_p[ii,last_ind],(depths_p[ii,last_ind]*-1), marker = 'o', c = rgb, markersize=10, linewidth = 0.5, markeredgecolor='black',alpha = 0.7) 
         
             time_save[ii] = time_p[ii,last_ind]
             depths_save[ii] = depths_p[ii,last_ind]
@@ -237,23 +284,35 @@ for idx,s in enumerate(seas): # the 4 seasons
     z_med = np.nanmedian(depths_save.ravel().data)
     time_med = np.nanmedian(time_save.ravel().data)
         
-    plt.axvline(x=time_med, color = 'k', linewidth = 4)
-    plt.axhline(y=z_med*-1, color = 'k', linewidth = 4)
-    plt.ylim(top=0, bottom =-240) 
-    plt.xlim(left=0, right = 90) #2500)
-    ax = plt.gca()
-    #ax.set_facecolor('lightgrey')   
-    plt.ylabel('Depth [m]', size = 20)
-    plt.xlabel('Time [days]', size = 20)
-    font = {'size'   : 20} ##'family' : 'normal',
+    ax.axvline(x=time_med, color = 'k', linewidth = 4)
+    ax.axhline(y=z_med*-1, color = 'k', linewidth = 4)
+    ax.set_ylim(top=0, bottom =-240) 
+    ax.set_xlim(left=0, right = 90) #2500)
+    #ax = plt.gca()  
+    if ids == 4:
+        ax.set_ylabel('Depth [m]', size = 26)
+    if ids == 6 or ids == 7:
+        ax.set_xlabel('Time [days]', size = 26)
+    # font = {'size'   : 20} ##'family' : 'normal',
             #'weight' : 'bold',
-    plt.title(str(s)+' First sinking depth reached within 90 days by rho ='+str(rho)+', size ='+str(size) ,size = 20)
     
-    matplotlib.rc('font', **font)
+    ax.set_title(letter+ ' radius = '+str(size)+'m') #, fontsize = 26)
+    #ax.set_title(str(s)+' First sinking depth reached within 90 days by rho ='+str(rho)+', size ='+str(size) ,size = 20)
+    
+    ax = plt.gca()
+    plt.rc('font', size = 24)
+
+cbaxes = fig.add_axes([0.1, 0.04, 0.8, 0.01])
+cbar = plt.colorbar(scat, cax=cbaxes, orientation="horizontal", aspect=50, extend='both', label = 'initial latitude')
+plt.rc('font', size = 24)
+
+fig.savefig('/Users/Lobel001/Desktop/Local_postpro/Kooi_figures/post_pro/Zs.pdf')
 
 # with open('/Users/Lobel001/Desktop/Local_postpro/Kooi_data/post_pro_data/Matias_test.pickle', 'wb') as f:
 #     pickle.dump([time_save,depths_save,lats_save], f)
 
+#fig.text(0.5, 0.04, 'Time [days]', ha='center', va='center', fontsize = 24)
+#fig.text(0.06, 0.5, 'Depth [m]', ha='center', va='center', rotation='vertical', fontsize = 24)
 
 #%% 30/07/20- No longer want scatterplot
 # plot_idx = np.random.permutation(dist_p.shape[0])
