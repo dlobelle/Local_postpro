@@ -18,7 +18,7 @@ GeoAxes._pcolormesh_patched = Axes.pcolormesh
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import matplotlib.ticker as mticker
 #import math
-#from pylab import *
+from numpy import *
 #import cmocean
 import os #, fnmatch 
 #import cartopy
@@ -46,13 +46,13 @@ yr = 2004
 numyrs = 1
 #seas = ['DJF', 'MAM', 'JJA', 'SON']
 
-cmap = plt.cm.get_cmap('magma_r', 9) #RdBu #Blues #vidiris
+cmap = plt.cm.get_cmap('magma_r', 10) #RdBu #Blues #vidiris
 row = 1 
 col = 1
 
 ''' prepare cartopy projection and gridspec'''
 
-projection = cartopy.crs.PlateCarree() #central_longitude=72+180)
+projection = cartopy.crs.PlateCarree(central_longitude=180) #central_longitude=72+180)
 plt.rc('font', size = 30)
 
     
@@ -62,7 +62,9 @@ fig_w = 25 #8 #30# 10 #30 # 30 25 #28
 fig_h = 20 #7 #25#9 #25 #30 30 #18
 fig = plt.figure(figsize=(fig_w,fig_h), constrained_layout=True) # 10,5
 gs = fig.add_gridspec(figure = fig, nrows = 4, ncols = 2, height_ratios=[6,6,6,1],hspace = 0.5) #, wspace = 0.5) #, height_ratios=[10,1,10,1], wspace = 0.05, hspace = 1) # gridspec.GridSpec
-    
+ 
+# fig2 = plt.figure(figsize=(fig_w,fig_h), constrained_layout=True) # 10,5
+# gs2 = fig.add_gridspec(figure = fig2, nrows = 4, ncols = 2, height_ratios=[6,6,6,1],hspace = 0.5)   
 #%%     
 for ids in range(size_st,size_st+numsizes):#8): #sizes
     size = 'r1e-0'+str(ids) #'r1e-02'
@@ -74,6 +76,7 @@ for ids in range(size_st,size_st+numsizes):#8): #sizes
     else:          
         data = Dataset(dirread+fname,'r')  
         time = data.variables['time'][0,:]/86400
+        time_all = (data.variables['time'][:,:]/86400)#-data.variables['time'][0,0]
         rho2 = float(rho) #rho_all[ii]
         size2 = float(size[1:len(size)]) #size_all[ii]
         rho_output=data.variables['rho_pl'][:]
@@ -92,12 +95,12 @@ for ids in range(size_st,size_st+numsizes):#8): #sizes
 
         z = []   
         depths2 = []
-        max_lon = np.zeros(depths.shape[0])
-        min_lon = np.zeros(depths.shape[0])
+        lon_sink = np.zeros(depths.shape[0])
+        lat_sink = np.zeros(depths.shape[0])
         for i in range(depths.shape[0]): #9620: number of particles 
             depths2 = depths[i,:] 
-            max_lon[i] = np.max(lons[i,:])
-            min_lon[i] = np.min(lons[i,:])
+            #max_lon[i] = np.max(lons[i,:])
+            #min_lon[i] = np.min(lons[i,:])
             z = np.where(depths2 > 1.)
             
             z2 = [0,] * depths.shape[1]
@@ -113,9 +116,11 @@ for ids in range(size_st,size_st+numsizes):#8): #sizes
             
                 
                 Ts[i] = time[z_set] #t_set = 
+                lon_sink[i] = lons[i,z_set]
+                lat_sink[i] = lats[i,z_set]
                 #Ts[Ts==0]= np.nan
-    print('For '+size+' min lon = '+str(np.min(min_lon)))
-    print('For '+size+' max lon = '+str(np.max(max_lon)))
+    # print('For '+size+' min lon = '+str(np.min(min_lon)))
+    # print('For '+size+' max lon = '+str(np.max(max_lon)))
     #     t_set = np.array(t_set)
     #     t_set[t_set==0]= np.nan
 
@@ -128,8 +133,8 @@ for ids in range(size_st,size_st+numsizes):#8): #sizes
     # t_set_all[t_set_all==0] = np.nan        
     # Ts = np.nanmean(t_set_all,axis=1) #[:,idx]
     # #Vs = np.nanmean(vs_max_all,axis=1)
-    
-   
+
+    Ts[isnan(Ts)] = 1500. # to that     
 #%%    
 
     if ids == 2:
@@ -176,11 +181,8 @@ for ids in range(size_st,size_st+numsizes):#8): #sizes
     #ax.set_ylim([-70, 80]) #,crs=cartopy.crs.PlateCarree())
     ax.set_extent([-150, -138, 18, 30]) #ax.set_extent([-180, -80, 0, 40])
     
-    scat = ax.scatter(lons[:,0], lats[:,0], marker='.', c=Ts,cmap = cmap, vmin = 0, vmax = 1100, s = 500,zorder=1) #scat = 
-    # cbar = plt.colorbar(scat, label = 'days') #,ax=axs[idx])  
-    # cbar.set_label(label='days', size='20')   
-    # cbar.ax.tick_params(labelsize=20) 
-    plt.title(letter+ ' radius = '+size_name)#, fontsize = 26) #str(yr)+' all seas average settling onset time [days], rho ='+str(rho)+', size ='+str(size) ,size = 20)
+    scat = ax.scatter(lons[:,0], lats[:,0], marker='.', c=Ts,cmap = cmap, vmin = 0, vmax = 1000, s = 1000,zorder=1,transform = cartopy.crs.PlateCarree()) 
+    ax.title.set_text(letter+ ' radius = '+size_name)  #plt.title(letter+ ' radius = '+size_name)#, fontsize = 26) #str(yr)+' all seas average settling onset time [days], rho ='+str(rho)+', size ='+str(size) ,size = 20)
         
     cbaxes = fig.add_axes([0.1, 0.06, 0.8, 0.01])
     cbar = plt.colorbar(scat, cax=cbaxes, orientation="horizontal", aspect=50, extend='max')
@@ -194,6 +196,36 @@ for ids in range(size_st,size_st+numsizes):#8): #sizes
     gl.xformatter = LONGITUDE_FORMATTER
     gl.ylabels_left = True
     gl.yformatter = LATITUDE_FORMATTER
+    
+    # test = lons[np.where(lons==np.nan)]
+    # time_all[test]==np.nan
+    plt.rc('font', size = 30)
+    if ids == 2: 
+        fig2 = plt.figure(figsize=(fig_w,fig_h), constrained_layout=True) # 10,5
+        gs2 = fig.add_gridspec(figure = fig2, nrows = 4, ncols = 2, height_ratios=[6,6,6,1],hspace = 0.5) 
+    ax2 = fig2.add_subplot(gs2[r,c], projection=projection)
+    ax2.coastlines(resolution='50m',zorder=3)
+    ax2.add_feature(cartopy.feature.LAND, color='lightgrey') #, zorder=2)
+    ax2.set_extent([110, -80, 0, 50]) #,crs=cartopy.crs.PlateCarree())
+    ax2.set_ylim([0, 50])
+    scat1 = ax2.scatter(lons[:,0], lats[:,0], c = 'k', marker='.', vmin = 0, vmax = 1000, s = 50,zorder=2, transform = cartopy.crs.PlateCarree())
+    scat2 = ax2.scatter(lons, lats, marker='.',  vmin = 0, vmax = 1000, s = 50,zorder=1, transform = cartopy.crs.PlateCarree()) # c = time_all, cmap = cmap,
+    scat3 = ax2.scatter(lon_sink, lat_sink, marker='.',  c=Ts,cmap = cmap, vmin = 0, vmax = 1000, s = 500,zorder=1, transform = cartopy.crs.PlateCarree())
+    ax2.title.set_text(letter+ ' radius = '+size_name) #plt.title
+    
+    cbaxes2 = fig2.add_axes([0.1, 0.06, 0.8, 0.01])
+    cbar2 = plt.colorbar(scat, cax=cbaxes2, orientation="horizontal", aspect=50, extend='max')
+    cbar2.set_label(label='[days]') #, size=18)
+    plt.rc('font', size = 20)
+    gl2 = ax2.gridlines(crs=cartopy.crs.PlateCarree(), draw_labels=False, linewidth=0.5,
+                          color='gray', alpha=0.5, linestyle='--')
+    # gl2.xlocator = mticker.FixedLocator(np.arange(110, -80, 4))
+    # gl2.ylocator = mticker.FixedLocator(np.arange(0, 50, 2))
+    gl2.xlabels_bottom = False #True
+    gl2.xformatter = LONGITUDE_FORMATTER
+    gl2.ylabels_left = False #True
+    gl2.yformatter = LATITUDE_FORMATTER
+    
     
     #cbar.ax.tick_params(labelsize=18)
     #plt.colorbar(scat, cax=cbaxes, orientation="horizontal", aspect=50, extend='max', label='[days]')
