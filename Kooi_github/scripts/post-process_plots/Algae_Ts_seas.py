@@ -81,8 +81,8 @@ for row in range(4): #progressbar(range(4)): # seasons
         ai = fig.add_subplot(gs[row, col], projection=projection)
         ai.coastlines(resolution='50m',zorder=3)
         ai.add_feature(cartopy.feature.LAND, color='lightgrey', zorder=2)
-        ai.set_extent([-140,-148,-4,4]) #-180, -80, -5, 5])
-        #ai.set_ylim([-70, 80]) #,crs=cartopy.crs.PlateCarree())
+        #ai.set_extent([-140,-148,-4,4]) #-180, -80, -5, 5])
+        ai.set_ylim([-70, 80]) #,crs=cartopy.crs.PlateCarree())
 
         if row == 0: 
             yr0 = '2003'
