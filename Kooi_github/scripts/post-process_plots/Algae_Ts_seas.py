@@ -5,27 +5,16 @@ Created on Mon Nov 16 23:38:26 2020
 
 @author: Lobel001
 """
+'''Figure 2 in JGR:Oceans draft: MEDUSA surface algal concentrations and Ts for the 4 seasons'''
 
 import numpy as np
 import xarray as xr
 from netCDF4 import Dataset
-#import pandas as pd
 import matplotlib.pyplot as plt
 import cartopy
-#from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-#from cartopy.util import add_cyclic_point
-#import matplotlib.colors as colors
-#import matplotlib.gridspec as gridspec
-#import matplotlib.patches as mpatches
-#import matplotlib.path as mpath
-#import matplotlib.ticker as mticker
-#from matplotlib.patches import Polygon, Ellipse
-#from glob import glob
 import cmocean.cm as cmo
 import os
 from numpy import *
-#import gsw
-#import pickle
 
 # Added this (from a forum) as a temporary fix to error I was getting regarding 'GeoAxes not having a _hold function'
 from matplotlib.axes import Axes
@@ -36,53 +25,40 @@ import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-#CHOOSE SIZE TO PLOT TS
+#CHOOSE SIZE TO PLOT Ts (in paper it's 1e-4m)
 size = 'r1e-04'
 rho = '920'
 
 dirread = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/NEMO_phys_params/'
 dirread_Ts = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/data_output/allrho/res_2x2/allr/'
-## To plot the MLD and algal conc (converted from MEDUSA phytoplankton conc) subplots in one figure: 2 columns 
-
-#from time import sleep
-#from progressbar import progressbar
 
 ''' Preparing the projection and subplots'''
 plt.rc('font', size = 14)
-projection = cartopy.crs.PlateCarree(central_longitude=72+180) #PlateCarree() #central_longitude=0)
+projection = cartopy.crs.PlateCarree(central_longitude=72+180) 
 fig_w = 10 
 fig_h = 11 
-fig = plt.figure(figsize=(fig_w,fig_h)) #10,10.5)) #, constrained_layout=True) #True) # 10,5 #(18,25)
-gs = fig.add_gridspec(figure = fig, nrows = 5, ncols = 2, height_ratios=[6,6,6,6,1])#,hspace = 1, wspace = 1)
+fig = plt.figure(figsize=(fig_w,fig_h)) 
+gs = fig.add_gridspec(figure = fig, nrows = 5, ncols = 2, height_ratios=[6,6,6,6,1])
 
 ''' Extract all files within a season into one variable '''
 
 seasnames = ['DJF', 'MAM', 'JJA', 'SON']
 monvals = ['12','01','02','03','04','05','06','07','08','09','10','11']
 
-    
-    
-for row in range(4): #progressbar(range(4)): # seasons
-    #sleep(0.02)
-    for col in range(2): # params
+for row in range(4): 
+    for col in range(2):
         i = row*2 + col
         seas = seasnames[row]
         
         print(seas)
-        # Lat, Lon = mask.variables['nav_lat'], mask.variables['nav_lon']
-        # latvals = Lat[:]; lonvals = Lon[:] # extract lat/lon values to numpy arrays
-        
-        
-        # with open(dirread+'MLD_2004_'+seas+'.pickle','rb') as f:  
-        #     M0 = pickle.load(f)
+
         yr0 = '2004'
         yr1 = '2004'
 
         ai = fig.add_subplot(gs[row, col], projection=projection)
         ai.coastlines(resolution='50m',zorder=3)
         ai.add_feature(cartopy.feature.LAND, color='lightgrey', zorder=2)
-        #ai.set_extent([-140,-148,-4,4]) #-180, -80, -5, 5])
-        ai.set_ylim([-70, 80]) #,crs=cartopy.crs.PlateCarree())
+        ai.set_ylim([-70, 80]) 
 
         if row == 0: 
             yr0 = '2003'
@@ -101,11 +77,8 @@ for row in range(4): #progressbar(range(4)): # seasons
             M = M.assign_coords(nav_lat=M.nav_lat)
             M = M.assign_coords(nav_lon=M.nav_lon) 
 
-            a2 = M.plot(ax=ai, x='nav_lon', y='nav_lat', add_colorbar=False, vmin=0, vmax=4e7, rasterized=True, cmap=cmo.algae, zorder = 1, transform=cartopy.crs.PlateCarree()) 
+            a = M.plot(ax=ai, x='nav_lon', y='nav_lat', add_colorbar=False, vmin=0, vmax=4e7, rasterized=True, cmap=cmo.algae, zorder = 1, transform=cartopy.crs.PlateCarree()) 
             title = 'Algal conc. in %s' % seas
-            
-
-        #ai.set_title('%s) %s ' % (chr(ord('a') + row*2 + col), title))
 
         
         if i ==1 or i == 3 or i ==5 or i ==7:
@@ -117,8 +90,8 @@ for row in range(4): #progressbar(range(4)): # seasons
             else:          
                 data = Dataset(dirread_Ts+fname,'r')  
                 time = data.variables['time'][0,:]/86400
-                rho2 = float(rho) #rho_all[ii]
-                size2 = float(size[1:len(size)]) #size_all[ii]
+                rho2 = float(rho)
+                size2 = float(size[1:len(size)])
                 rho_output=data.variables['rho_pl'][:]
                 r_output=data.variables['r_pl'][:]
                
@@ -156,24 +129,20 @@ for row in range(4): #progressbar(range(4)): # seasons
             
             t_set[isnan(t_set)] = 100.
          
-            a3 = ai.scatter(lons[:,0], lats[:,0], marker='.', c=t_set,cmap = cmap, vmin = 0, vmax = 90, s = 500, zorder=1,transform = cartopy.crs.PlateCarree()) #,crs=cartopy.crs.PlateCarree()) #scat = 
+            a2 = ai.scatter(lons[:,0], lats[:,0], marker='.', c=t_set,cmap = cmap, vmin = 0, vmax = 90, s = 500, zorder=1,transform = cartopy.crs.PlateCarree()) #,crs=cartopy.crs.PlateCarree()) #scat = 
 
             title = '$T_s$ in %s' % seas
             
 
         ai.set_title('%s) %s ' % (chr(ord('a') + row*2 + col), title))
 
-# cbaxes = fig.add_axes([0.02, 0.045, 0.3, 0.015]) # defines the x, y, w, h of the colorbar 
-# plt.colorbar(a, cax=cbaxes, orientation="horizontal", aspect=100, extend='max', label='[m]', use_gridspec=True) #, fontsize = 22)
-#plt.rc('font', size = 14)
+cbaxes = fig.add_axes([0.05, 0.045, 0.4, 0.015]) # defines the x, y, w, h of the colorbar 
+plt.colorbar(a, cax=cbaxes, orientation="horizontal", aspect=100, extend='max', label='[no. m$^{-3}$]', use_gridspec=True)
 
-cbaxes2 = fig.add_axes([0.05, 0.045, 0.4, 0.015]) # defines the x, y, w, h of the colorbar 
-plt.colorbar(a2, cax=cbaxes2, orientation="horizontal", aspect=100, extend='max', label='[no. m$^{-3}$]', use_gridspec=True) #, fontsize = 22)
-
-cbaxes3 = fig.add_axes([0.55, 0.045, 0.4, 0.015]) # defines the x, y, w, h of the colorbar 
-plt.colorbar(a3, cax=cbaxes3, orientation="horizontal", aspect=100, extend='max', label='[days]', use_gridspec=True) #, fontsize = 22)
-#plt.rc('font', size = 14)
+cbaxes2 = fig.add_axes([0.55, 0.045, 0.4, 0.015]) 
+plt.colorbar(a2, cax=cbaxes2, orientation="horizontal", aspect=100, extend='max', label='[days]', use_gridspec=True) 
 
 fig.canvas.draw()
 plt.tight_layout()
+'''No longer saving figures this way, simply saving from the Spyder plot panel, top-right'''
 #plt.savefig('/home/dlobelle/Kooi_figures/non_parcels_output/NEMO_MLD_algae_allseas_2004.pdf')
