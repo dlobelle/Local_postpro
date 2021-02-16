@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Nov 18 18:32:58 2020
+Created on Mon Feb 15 20:11:04 2021
 
 @author: Lobel001
 """
 
-'''For resubmission: now Figure 5 in JGR:Oceans manuscript: Ts for regional analyses (North Pacific Subtropical Gyre and Equatorial Pacific)'''
-''' Only size 1 micron used for manuscript (since required most explanations)'''
+'''For resubmission: decided to add Zs for Fig. 6 now in JGR:Oceans manuscript for regional analyses (North Pacific Subtropical Gyre and Equatorial Pacific)'''
 
 import matplotlib.pyplot as plt
 from netCDF4 import Dataset
@@ -50,7 +49,7 @@ dirwrite = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/post_pro_data/'
 
 #%%
 
-seas = ['DJF', 'MAM', 'JJA', 'SON']
+seas = ['MAM'] #'DJF', 'MAM', 'JJA', 'SON']
 proc = ['bfadv','nobf','noadv'] #bfadv', 
 region = ['NPSG','EqPac'] 
 
@@ -62,10 +61,11 @@ projection = cartopy.crs.PlateCarree(central_longitude=72+180)
 plt.rc('font', size = 24)
 
 fig_w = 20
-fig_h = 20 
+fig_h = 15
 fig = plt.figure(figsize=(fig_w,fig_h), constrained_layout=True) # 10,5
 gs = fig.add_gridspec(figure = fig, nrows = 3, ncols = 3, height_ratios=[4,4,1]) #,hspace = 0.5, wspace = 0.5) #, height_ratios=[10,1,10,1], wspace = 0.05, hspace = 1) # gridspec.GridSpec
     
+  
 for row in range(2): 
     for col in range(3):
         ind = row*3 + col
@@ -97,14 +97,14 @@ for row in range(2):
             else:          
                 data = Dataset(dirread+fname,'r')  
                 time = data.variables['time'][0,:]/86400
-                rho2 = float(rho) #rho_all[ii]
-                size2 = float(size[1:len(size)]) #size_all[ii]
+                rho2 = float(rho)
+                size2 = float(size[1:len(size)]) 
                 rho_output=data.variables['rho_pl'][:]
                 r_output=data.variables['r_pl'][:]
                
                 inds = np.where((rho_output==rho2) & (r_output.data==size2))[0]
                
-                lons=data.variables['lon'][inds]#+72+180
+                lons=data.variables['lon'][inds]
                 lats=data.variables['lat'][inds] 
                 depths =data.variables['z'][inds]
                 vs = data.variables['vs'][inds]
@@ -125,10 +125,7 @@ for row in range(2):
             
             for i in range(depths.shape[0]): #9620: number of particles 
                 vs_init2 = vs_init[i,:]
-                if p == 'noadv':
-                    w2 = 0
-                else:
-                    w2 = w[i,:]
+                w2 = w[i,:]
                 w_vs = vs_init2 + w2 
                 w_ind = np.where(w_vs>0)
                 
@@ -137,19 +134,65 @@ for row in range(2):
                     z_set2 = w_ind[0][0]-1   
                     
                     t_set[i] = time[z_set2]
-            t_set_all[:,idy] = t_set        
-        Ts = np.nanmean(t_set_all,axis=1) 
-        Ts[isnan(Ts)] = 100. 
                     
-        ''' plot: first columm is Ts'''
-        cmap = plt.cm.get_cmap('magma_r', 9)
-    
-        ax = fig.add_subplot(gs[row,col], projection=projection)
-        ax.coastlines(resolution='50m',zorder=3)
-        ax.add_feature(cartopy.feature.LAND, color='lightgrey', zorder=2)
-        ax.set_extent([lonmin, lonmax, latmin, latmax])
-        
+                    
+                    ''' Defining Zs '''
+                    z2 = [0,] * depths.shape[1]
+                    for ii in range(z_set2,depths.shape[1]): 
+                        z2[ii-1] = depths[i,ii]-depths[i,ii-1] 
+                    zf = np.where(np.array(z2) < 0.)[:]           
+                    zind = zf[0][0] if np.array(zf).any() else []
+                    if np.array(zind).any():
+                        j = np.array(zind)
+                        boo[i,:j+1] = 1.
+
+            plot_idx = np.random.permutation(depths.shape[0])
+            
+            time_p = np.tile(time,(depths.shape[0],1))
+            lats_p = np.tile(lats[plot_idx,0],(lats.shape[1],1)).T
+            depths_p = depths[plot_idx,:]
+            boo2 = np.array(boo[plot_idx,:],dtype='bool')
+
+
+            ''' using colorbar from above to separate colours by initial release latitudinal bins '''
+            
+            ax = fig.add_subplot(gs[row,col])
+            
+            time_save = np.zeros(plot_idx.shape[0])
+            time_save[:] = np.nan
+            depths_save = np.zeros(plot_idx.shape[0])
+            depths_save[:] = np.nan  
+            lats_save = np.zeros(plot_idx.shape[0])
+            d = np.zeros((depths.shape[0],depths.shape[1]))
+            d[:] = np.nan 
+            for ii in range(plot_idx.shape[0]):
+                boo_p = boo2[ii,:]
+          
+                """To plot a scatter dot for Zs"""
+                    
+                ax.plot(time_p[ii,boo_p],(depths_p[ii,boo_p]*-1), c = 'grey', linewidth=3, alpha = 0.7)
+                ind_nonan = np.where(depths_p[ii,boo_p]>0.6)
+                if np.array(ind_nonan).any():
+                    last_ind = ind_nonan[0][-1]
+                    ax.plot(time_p[ii,last_ind],(depths_p[ii,last_ind]*-1), marker = 'o', c = 'grey', markersize=15, linewidth = 1, markeredgecolor='black',alpha = 0.7, markeredgewidth=3) 
+                
+                    time_save[ii] = time_p[ii,last_ind]
+                    depths_save[ii] = depths_p[ii,last_ind]
+                    lats_save[ii] = lats_p[ii,0]
+            
+            if row == 0:
+                ax.set_ylim(top=-0.5, bottom =-2) 
+            else:
+                ax.set_ylim(top=2, bottom =-90) 
+            ax.set_xlim(left=0, right = 90)
+
+        plt.rc('font') 
+
+        if row == 1 and col ==1:
+            ax.set_xlabel('Time [days]')
+            
         if col == 0:
+            ax.set_ylabel('Depth [m]')
             proc_ttl = 'original'
         if col == 1:
             proc_ttl = 'no biofouling'
@@ -158,21 +201,7 @@ for row in range(2):
         
         letter = (chr(ord('a') + row*3+col))
         
-              
-        scat = ax.scatter(lons[:,0], lats[:,0], marker='.', edgecolors = 'k', c=Ts,cmap = cmap, vmin = 0, vmax = 90, s = 1500,zorder=1,transform = cartopy.crs.PlateCarree()) #scat = 
-
+            
         ax.title.set_text(f'({letter}) {r}: {proc_ttl}')
-        
-        gl = ax.gridlines(crs=cartopy.crs.PlateCarree(), draw_labels=False, linewidth=0.5,
-                color='gray', alpha=0.5, linestyle='--')
-        gl.xlocator = mticker.FixedLocator(np.arange(lonmax-6,lonmin+6,4))
-        gl.ylocator = mticker.FixedLocator(np.arange(latmin-6, latmax+6,4))
-        gl.xlabels_bottom = True
-        gl.xformatter = LONGITUDE_FORMATTER
-        gl.ylabels_left = True
-        gl.yformatter = LATITUDE_FORMATTER
 
-
-plt.suptitle(f'radius = {size_ttl}', y=0.95, fontsize=34)          
-cbaxes = fig.add_axes([0.15, 0.2, 0.75, 0.01])
-plt.colorbar(scat, cax=cbaxes, orientation="horizontal", aspect=50, extend='max', label = '[days]')
+plt.suptitle(f'radius = {size_ttl} in {s} \n', fontsize=34)
