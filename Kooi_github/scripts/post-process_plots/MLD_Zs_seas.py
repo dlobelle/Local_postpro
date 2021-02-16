@@ -6,7 +6,7 @@ Created on Mon Nov 16 23:38:26 2020
 
 @author: Lobel001
 """
-'''Figure 3 in JGR:Oceans draft: MEDUSA surface algal concentrations and Ts for the 4 seasons'''
+'''For the resubmision, this became Fig. 4 (instead of Figure 3) in JGR:Oceans draft: MEDUSA surface algal concentrations and Ts for the 4 seasons'''
 
 import numpy as np
 import xarray as xr
@@ -25,8 +25,8 @@ import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-#CHOOSE SIZE TO PLOT TS
-size = 'r1e-04'
+#CHOOSE SIZE TO PLOT Ts (in paper it's now 1e-6 for resubmimssion: and 1e-4m is in SI)
+size = 'r1e-06'
 rho = '920'
 
 dirread = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/NEMO_phys_params/'
@@ -190,7 +190,7 @@ for row in range(4):
                 """To plot a scatter dot for Zs"""
                     
                 ai.plot(time_p[ii,boo_p],(depths_p[ii,boo_p]*-1), c = rgb, linewidth=1, alpha = 0.6)
-                ind_nonan = np.where(depths_p[ii,boo_p]>1.)
+                ind_nonan = np.where(depths_p[ii,boo_p]>0.6)
                 if np.array(ind_nonan).any():
                     last_ind = ind_nonan[0][-1]
                     ai.plot(time_p[ii,last_ind],(depths_p[ii,last_ind]*-1), marker = 'o', c = rgb, markersize=5, linewidth = 0, markeredgecolor='black',alpha = 0.6) 
@@ -198,17 +198,8 @@ for row in range(4):
                     time_save[ii] = time_p[ii,last_ind]
                     depths_save[ii] = depths_p[ii,last_ind]
                     lats_save[ii] = lats_p[ii,0]
-            
-            ''' median depth and distance'''
-            z_med = np.nanmedian(depths_save.ravel().data)
-            time_med = np.nanmedian(time_save.ravel().data)
-            
-            print(f'median {seas} depth = {z_med} m')
-            print(f'median {seas} Zs timescale = {time_med} days')
 
-            ai.axvline(x=time_med, color = 'k', linewidth = 4)
-            #ai.axhline(y=z_med*-1, color = 'k', linewidth = 4) #removed this since doesn't add to analysis
-            ai.set_ylim(top=0, bottom =-160) 
+            ai.set_ylim(top=0, bottom =-200) 
             ai.set_xlim(left=0, right = 90) 
 
 
