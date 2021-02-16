@@ -5,7 +5,7 @@ Created on Mon Nov 16 23:38:26 2020
 
 @author: Lobel001
 """
-'''Figure 2 in JGR:Oceans draft: MEDUSA surface algal concentrations and Ts for the 4 seasons'''
+'''For the resubmision, this became Fig. 3 in JGR:Oceans draft: MEDUSA surface algal concentrations and Ts for the 4 seasons'''
 
 import numpy as np
 import xarray as xr
@@ -16,7 +16,7 @@ import cmocean.cm as cmo
 import os
 from numpy import *
 
-# Added this (from a forum) as a temporary fix to error I was getting regarding 'GeoAxes not having a _hold function'
+# Added this (from a forum) as a fix to error I was getting regarding 'GeoAxes not having a _hold function'
 from matplotlib.axes import Axes
 from cartopy.mpl.geoaxes import GeoAxes
 GeoAxes._pcolormesh_patched = Axes.pcolormesh
@@ -25,8 +25,8 @@ import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-#CHOOSE SIZE TO PLOT Ts (in paper it's 1e-4m)
-size = 'r1e-04'
+'''CHOOSE SIZE TO PLOT Ts (in paper it's now 1e-6 for resubmimssion: and 1e-4m is in SI)'''
+size = 'r1e-06'
 rho = '920'
 
 dirread = '/Users/Lobel001/Desktop/Local_postpro/Kooi_data/NEMO_phys_params/'
@@ -39,8 +39,6 @@ fig_w = 10
 fig_h = 11 
 fig = plt.figure(figsize=(fig_w,fig_h)) 
 gs = fig.add_gridspec(figure = fig, nrows = 5, ncols = 2, height_ratios=[6,6,6,6,1])
-
-''' Extract all files within a season into one variable '''
 
 seasnames = ['DJF', 'MAM', 'JJA', 'SON']
 monvals = ['12','01','02','03','04','05','06','07','08','09','10','11']
@@ -129,7 +127,7 @@ for row in range(4):
             
             t_set[isnan(t_set)] = 100.
          
-            a2 = ai.scatter(lons[:,0], lats[:,0], marker='.', c=t_set,cmap = cmap, vmin = 0, vmax = 90, s = 500, zorder=1,transform = cartopy.crs.PlateCarree()) #,crs=cartopy.crs.PlateCarree()) #scat = 
+            a2 = ai.scatter(lons[:,0], lats[:,0], marker='.', c=t_set,cmap = cmap, vmin = 0, vmax = 90, s = 10, zorder=1,transform = cartopy.crs.PlateCarree()) #,crs=cartopy.crs.PlateCarree()) #scat = 
 
             title = '$T_s$ in %s' % seas
             
